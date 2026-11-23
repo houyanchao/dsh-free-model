@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-free-model-kilo
+      name: '@houyanchao/dsh-free-model'
