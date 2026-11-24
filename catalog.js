@@ -16,6 +16,10 @@ export class KiloCatalogError extends Error {
   }
 }
 
+export function isCatalogConnectionError(error) {
+  return error instanceof KiloCatalogError && (error.code === 'TRANSPORT' || error.code === 'TIMEOUT');
+}
+
 function isZero(price) {
   return price === 0 || (typeof price === 'string' && /^0+(?:\.0+)?(?:e[+-]?\d+)?$/i.test(price));
 }
@@ -141,9 +145,10 @@ export function createKiloCatalog({ fetch: fetchImpl = globalThis.fetch, now = D
     throw lastError;
   }
 
-  async function load(signal) {
+  async function load(signal, refresh = false) {
     signal?.throwIfAborted();
-    if (now() >= nextRefresh || (!snapshot && !lastError)) {
+    const manualRefresh = refresh && (!lastError || isCatalogConnectionError(lastError));
+    if (now() >= nextRefresh || manualRefresh || (!snapshot && !lastError)) {
       inFlight ??= requestCatalog(fetchImpl, now).then(
         result => {
           snapshot = result;
@@ -157,12 +162,13 @@ export function createKiloCatalog({ fetch: fetchImpl = globalThis.fetch, now = D
       ).finally(() => { inFlight = undefined; });
       await waitWithSignal(inFlight, signal);
     }
+    if (refresh && lastError) throw lastError;
     return currentSnapshot();
   }
 
   return {
-    async listModels(signal) {
-      const entries = await load(signal);
+    async listModels(signal, { refresh = false } = {}) {
+      const entries = await load(signal, refresh);
       return [...entries.values()]
         .filter(entry => entry.expiresAt > now())
         .map(entry => structuredClone(entry.model));

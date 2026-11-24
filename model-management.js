@@ -3,6 +3,8 @@ import { mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { KiloCatalogError } from './catalog.js';
+import { createModelAvailability } from './model-availability.js';
+import { streamKilo } from './stream.js';
 
 function harnessHome() {
   const home = process.env.DSH_HOME?.trim();
@@ -46,9 +48,13 @@ function json(body, status = 200) {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 }
 
-export function registerModelManagement(ctx, { catalog, visibility, onChange }) {
+export function registerModelManagement(ctx, { catalog, visibility, fetch, onChange }) {
   const lifetime = new AbortController();
   ctx.effect(() => () => lifetime.abort(), 'dsh-free-model: management lifetime');
+  const availability = createModelAvailability({
+    signal: lifetime.signal,
+    stream: (options, model) => streamKilo(options, model, fetch),
+  });
   ctx.connection.fetch.register({
     path: '/api/dsh-free-model/models',
     methods: ['GET', 'POST'],
@@ -57,8 +63,13 @@ export function registerModelManagement(ctx, { catalog, visibility, onChange }) 
       const signal = AbortSignal.any([request.signal, lifetime.signal]);
       try {
         if (request.method === 'GET') {
-          const [models, isDisabled] = await Promise.all([catalog.listModels(signal), visibility.readDisabled()]);
-          return json({ models: models.map(({ id, name }) => ({ id, name, enabled: !isDisabled(id) })) });
+          const refresh = new URL(request.url).searchParams.get('refresh') === '1';
+          const [models, isDisabled] = await Promise.all([catalog.listModels(signal, { refresh }), visibility.readDisabled()]);
+          if (refresh && !lifetime.signal.aborted) onChange();
+          return json({
+            models: models.map(({ id, name }) => ({ id, name, enabled: !isDisabled(id) })),
+            availability: availability.snapshot(),
+          });
         }
 
         const input = await request.json().catch(() => undefined);
@@ -76,6 +87,24 @@ export function registerModelManagement(ctx, { catalog, visibility, onChange }) 
       } catch (error) {
         if (error instanceof KiloCatalogError) return json({ error: error.message }, 502);
         return json({ error: request.method === 'GET' ? '无法读取模型开关。' : '无法保存模型开关，请重试。' }, 500);
+      }
+    },
+  });
+  ctx.connection.fetch.register({
+    path: '/api/dsh-free-model/models/availability',
+    methods: ['GET', 'POST'],
+    requestBody: 'buffered',
+    async fetch(request) {
+      const current = availability.snapshot();
+      if (request.method === 'GET' || current.checking || current.retryAt > Date.now()) return json(current);
+
+      try {
+        const signal = AbortSignal.any([request.signal, lifetime.signal]);
+        const models = await catalog.listModels(signal);
+        signal.throwIfAborted();
+        return json(availability.start(models), 202);
+      } catch (error) {
+        return json({ error: error instanceof KiloCatalogError ? error.message : '无法启动模型检测，请重试。' }, 502);
       }
     },
   });

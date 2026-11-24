@@ -13,7 +13,7 @@
     "./client": "./client.js",
     "./package.json": "./package.json"
   },
-  "files": ["index.js", "catalog.js", "stream.js", "model-management.js", "client.js", "cordis.patch.yml"],
+  "files": ["index.js", "catalog.js", "stream.js", "model-management.js", "model-availability.js", "client.js", "cordis.patch.yml"],
   "engines": { "node": "^22.19.0 || >=24.0.0" },
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },

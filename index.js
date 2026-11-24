@@ -1,5 +1,5 @@
 import manifest from './package.json' with { type: 'json' };
-import { createKiloCatalog, KiloCatalogError, KILO_PROVIDER } from './catalog.js';
+import { createKiloCatalog, isCatalogConnectionError, KiloCatalogError, KILO_PROVIDER } from './catalog.js';
 import { createModelVisibility, registerModelManagement } from './model-management.js';
 import { DEFAULT_MAX_TOKENS, maxTokensParameter, streamKilo } from './stream.js';
 
@@ -37,7 +37,7 @@ export function createKiloAdapter({
 
   return {
     providerInfo(provider) {
-      return { id: provider, name: 'Kilo 免费模型' };
+      return { id: provider, name: '免费模型' };
     },
 
     providerRetryPolicy() {
@@ -53,7 +53,11 @@ export function createKiloAdapter({
     },
 
     async listModels() {
-      const [models, isDisabled] = await Promise.all([catalog.listModels(), visibility?.readDisabled()]);
+      const directory = catalog.listModels().catch(error => {
+        if (!isCatalogConnectionError(error)) throw error;
+        return [];
+      });
+      const [models, isDisabled] = await Promise.all([directory, visibility?.readDisabled()]);
       return models.filter(model => !isDisabled?.(model.id)).map(resolvedInfo);
     },
 
@@ -82,6 +86,9 @@ export function apply(ctx) {
   const adapter = createKiloAdapter({ catalog, visibility });
   const registration = ctx.llm.registerAdapter([KILO_PROVIDER], adapter);
   ctx.inject(['connection'], scope => {
-    registerModelManagement(scope, { catalog, visibility, onChange: () => registration.replace([KILO_PROVIDER]) });
+    registerModelManagement(scope, {
+      catalog, visibility, fetch: requestKilo,
+      onChange: () => registration.replace([KILO_PROVIDER]),
+    });
   });
 }
