@@ -1,4 +1,4 @@
-# dsh-free-model
+# dsh-open-model
 
 DeepSeek Harness 的 Kilo 免费模型插件。启用后，左侧栏会出现「免费模型」入口，原生模型选择器会显示「免费模型」分组。目录和对话请求都走 Kilo 官方匿名 API，无需登录或填写 API Key。
 
@@ -8,15 +8,17 @@ DeepSeek Harness 的 Kilo 免费模型插件。启用后，左侧栏会出现「
 
 ## 在自研 DSH 客户端安装
 
-在顶部开发菜单选择「本地插件调试」→「导入本地插件…」，选择项目目录。如果插件已导入但处于关闭状态，在左侧「插件」→「已安装」中打开 `@houyanchao/dsh-free-model` 的开关。
+在 DSH 的插件管理页中搜索并安装 `dsh-open-model`。如果已经安装旧包 `@houyanchao/dsh-free-model`，请先移除旧包再安装新包。已有对话使用的模型标识和本地模型开关设置沿用原值。
+
+本地开发时，在顶部开发菜单选择「本地插件调试」→「导入本地插件…」，选择项目目录。如果插件已导入但处于关闭状态，在左侧「插件」→「已安装」中打开 `dsh-open-model` 的开关。
 
 也可用目标客户端自己的 DSH 环境链接项目目录。
 
 ```sh
-dsh plugin --profile web add "link:/absolute/path/to/dsh-free-model"
+dsh plugin --profile web add "link:/absolute/path/to/dsh-open-model"
 ```
 
-包名为 `@houyanchao/dsh-free-model`，本地加载条目和 Provider ID 都是 `dsh-free-model-kilo`。
+包名为 `dsh-open-model`，本地加载条目和 Provider ID 都是 `dsh-free-model-kilo`。
 
 ## 管理模型
 

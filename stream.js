@@ -353,7 +353,7 @@ export async function* streamKilo(options, model, fetchImpl = fetch, attribution
       headers: {
         'content-type': 'application/json',
         accept: 'text/event-stream',
-        'user-agent': attribution['user-agent'] ?? 'dsh-free-model',
+        'user-agent': attribution['user-agent'] ?? 'dsh-open-model',
       },
       body: JSON.stringify(requestBody(options, model)),
       redirect: 'error',

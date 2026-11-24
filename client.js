@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-  id: '@houyanchao/dsh-free-model',
+  id: 'dsh-open-model',
   factory(require) {
     const { createElement: h, useEffect, useId, useRef, useState, useSyncExternalStore } = require('react');
     const { Button, Switch, IconSparkleRegular, IconSparkle16 } = require('@deepseek-ai/dsh-client-ui-primitives');
@@ -8,8 +8,8 @@ window.__ModuleLoader__.load({
     const availabilityPath = `${apiPath}/availability`;
     const updatePath = '/api/dsh-free-model/update';
     const updateCheckInterval = 5 * 60 * 1000;
-    const packageName = '@houyanchao/dsh-free-model';
-    const repositoryUrl = 'https://github.com/houyanchao/dsh-free-model';
+    const packageName = 'dsh-open-model';
+    const repositoryUrl = 'https://github.com/houyanchao/dsh-open-model';
     const npmRegistry = 'https://registry.npmjs.org/';
     const publishedVersion = /^\d+\.\d+\.\d+(?:-[\da-z-]+(?:\.[\da-z-]+)*)?(?:\+[\da-z-]+(?:\.[\da-z-]+)*)?$/i;
     const recommendedPlugins = [

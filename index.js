@@ -9,7 +9,7 @@ export const inject = ['llm'];
 
 function requestKilo(url, options) {
   const headers = new Headers(options.headers);
-  headers.set('user-agent', `dsh-free-model/${manifest.version} (+https://github.com/deepseek-ai/deepseek-harness)`);
+  headers.set('user-agent', `dsh-open-model/${manifest.version} (+https://github.com/deepseek-ai/deepseek-harness)`);
   return fetch(url, { ...options, headers });
 }
 
