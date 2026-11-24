@@ -339,7 +339,7 @@ window.__ModuleLoader__.load({
         return () => style.remove();
       }, 'free-model: styles');
       ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
-        name: 'sidebar.panellist', id: panelId, order: 8, label: () => t('title'),
+        name: 'sidebar.panellist', id: panelId, order: 30, label: () => t('title'),
       }, SidebarIcon));
       ctx.slots.inject('main', () => ctx.slots.register({
         name: 'main', key: panelId, locale: panelId,
