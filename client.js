@@ -1,11 +1,15 @@
 window.__ModuleLoader__.load({
   id: '@houyanchao/dsh-free-model',
   factory(require) {
-    const { createElement: h, useEffect, useId, useRef, useState } = require('react');
+    const { createElement: h, useEffect, useId, useRef, useState, useSyncExternalStore } = require('react');
     const { Button, Switch, IconSparkleRegular, IconSparkle16 } = require('@deepseek-ai/dsh-client-ui-primitives');
     const panelId = 'dsh-free-model';
     const apiPath = '/api/dsh-free-model/models';
     const availabilityPath = `${apiPath}/availability`;
+    const updatePath = '/api/dsh-free-model/update';
+    const updateCheckInterval = 5 * 60 * 1000;
+    const packageName = '@houyanchao/dsh-free-model';
+    const repositoryUrl = 'https://github.com/houyanchao/dsh-free-model';
     const resultStatuses = new Set(['checking', 'available', 'unavailable']);
     const emptyAvailability = { checking: false, models: [] };
     const reasonKeys = new Map(Object.entries({
@@ -45,6 +49,10 @@ window.__ModuleLoader__.load({
         reasonEmpty: '未收到文本回复',
         reasonServer: '上游服务异常',
         reasonUnknown: '本次检测失败',
+        updateBadge: '更新',
+        updateTitle: '有新版本',
+        updateDetails: '查看更新',
+        viewProject: '查看 GitHub 仓库',
       },
       en: {
         title: 'Free Models',
@@ -76,6 +84,10 @@ window.__ModuleLoader__.load({
         reasonEmpty: 'No text reply received',
         reasonServer: 'Upstream service error',
         reasonUnknown: 'Check failed',
+        updateBadge: 'Update',
+        updateTitle: 'Update available',
+        updateDetails: 'View update',
+        viewProject: 'View GitHub repository',
       },
     };
 
@@ -86,10 +98,40 @@ window.__ModuleLoader__.load({
         font-size: 14px; line-height: 1.5;
       }
       .dsh-free-model-content { width: min(calc(100% - 36px), 760px); margin-inline: auto; padding-block: 28px 48px; }
-      .dsh-free-model-header { display: flex; align-items: flex-start; gap: 8px 16px; justify-content: space-between; flex-wrap: wrap; }
-      .dsh-free-model-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .dsh-free-model-update-banner {
+        display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
+        margin-block-end: 24px; padding: 8px 12px 8px 14px; border-radius: 12px;
+        border: 1px solid var(--dsw-alias-border-l3, color-mix(in srgb, currentColor 12%, transparent));
+        background: color-mix(in srgb, currentColor 3%, var(--dsw-alias-bg-layer-1));
+      }
+      .dsh-free-model-update-banner-content {
+        display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px;
+        flex: 1 1 180px; min-width: 0; margin: 0; overflow-wrap: anywhere;
+      }
+      .dsh-free-model-update-title { font-weight: 600; }
+      .dsh-free-model-update-version { color: var(--dsw-alias-label-secondary); font-size: 13px; }
+      .dsh-free-model-update-action {
+        display: inline-flex; align-items: center; min-height: 32px; padding-inline: 12px;
+        margin-inline-start: auto; border-radius: 999px; white-space: nowrap;
+        border: 1px solid var(--dsw-alias-border-l3, color-mix(in srgb, currentColor 16%, transparent));
+        background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary);
+        font-size: 13px; font-weight: 550; text-decoration: none;
+      }
+      .dsh-free-model-update-action:hover { background: var(--dsw-alias-interactive-bg-hover); }
+      .dsh-free-model-update-action:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+      .dsh-free-model-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; }
       .dsh-free-model-header h1 { margin: 0; font-size: 24px; line-height: 1.3; font-weight: 600; }
-      .dsh-free-model-hint { margin: 6px 0 0; color: var(--dsw-alias-label-secondary); }
+      .dsh-free-model-hint { grid-column: 1 / -1; margin: 0; color: var(--dsw-alias-label-secondary); }
+      .dsh-free-model-header-links { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+      .dsh-free-model-version { color: var(--dsw-alias-label-secondary); font-size: 13px; white-space: nowrap; }
+      .dsh-free-model-project-link {
+        display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+        border-radius: 50%; color: var(--dsw-alias-label-secondary); text-decoration: none;
+      }
+      .dsh-free-model-project-link:is(:hover, :focus-visible) {
+        color: var(--dsw-alias-label-primary); background: color-mix(in srgb, currentColor 8%, transparent);
+      }
+      .dsh-free-model-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-block-start: 16px; }
       .dsh-free-model-status { margin-block: 20px 0; }
       .dsh-free-model-list { padding: 0; margin: 20px 0 0; list-style: none; }
       .dsh-free-model-row {
@@ -110,6 +152,15 @@ window.__ModuleLoader__.load({
       .dsh-free-model-id { display: block; margin-block-start: 3px; font-size: 12px; color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
       .dsh-free-model-error { color: var(--dsw-alias-state-warn-label, #a1421c); overflow-wrap: anywhere; }
       .dsh-free-model-row .dsh-free-model-error { grid-column: 1 / -1; margin: 0; }
+      .dsh-free-model-update-badge {
+        display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 999px;
+        background: var(--dsw-alias-label-primary); color: var(--dsw-alias-bg-layer-1);
+        font-size: 11px; font-weight: 550; line-height: 16px; white-space: nowrap;
+      }
+      .dsh-free-model-update-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dsw-alias-label-primary); }
+      .dsh-free-model-update-sr {
+        position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+      }
     `;
 
     async function request(path, signal, body) {
@@ -124,6 +175,91 @@ window.__ModuleLoader__.load({
       return data;
     }
 
+    function monitorUpdates(ctx) {
+      let update = null;
+      const listeners = new Set();
+      ctx.effect(() => {
+        const controller = new AbortController();
+        const { signal } = controller;
+        let checking = false;
+        async function refresh() {
+          if (checking || signal.aborted) return;
+          checking = true;
+          let next = update && { currentVersion: update.currentVersion };
+          try {
+            const data = await request(updatePath, signal);
+            if (typeof data?.currentVersion === 'string') {
+              next = { currentVersion: data.currentVersion };
+              if (data.status === 'update_available' && typeof data.latestVersion === 'string') {
+                next.latestVersion = data.latestVersion;
+              }
+            }
+          } catch {
+            // The update request is independent of the model list.
+          } finally {
+            checking = false;
+          }
+          if (signal.aborted || (update?.currentVersion === next?.currentVersion
+            && update?.latestVersion === next?.latestVersion)) return;
+          update = next;
+          for (const listener of listeners) listener();
+        }
+        const recheck = () => { void refresh(); };
+        const timer = window.setInterval(recheck, updateCheckInterval);
+        window.addEventListener('focus', recheck);
+        recheck();
+        return () => {
+          controller.abort();
+          window.clearInterval(timer);
+          window.removeEventListener('focus', recheck);
+        };
+      }, 'free-model: update checks');
+      return {
+        getSnapshot: () => update,
+        subscribe(listener) {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+      };
+    }
+
+    function UpdateBanner({ ctx, t, update }) {
+      if (!update?.latestVersion) return null;
+
+      function openDetails(event) {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        try {
+          const navigation = ctx.get('pluginNavigation');
+          if (typeof navigation?.openBundle !== 'function') return;
+          navigation.openBundle(packageName);
+          event.preventDefault();
+        } catch {
+          // The link leads to npm if plugin management is unavailable.
+        }
+      }
+      return h('div', { className: 'dsh-free-model-update-banner' },
+        h('p', { className: 'dsh-free-model-update-banner-content' },
+          h('strong', { className: 'dsh-free-model-update-title' }, t('updateTitle')),
+          h('span', { className: 'dsh-free-model-update-version' }, `v${update.latestVersion}`),
+        ),
+        h('a', { className: 'dsh-free-model-update-action', href: `https://www.npmjs.com/package/${packageName}`,
+          target: '_blank', rel: 'noopener noreferrer', onClick: openDetails }, t('updateDetails')),
+      );
+    }
+
+    function HeaderLinks({ t, currentVersion }) {
+      const label = t('viewProject');
+      return h('div', { className: 'dsh-free-model-header-links' },
+        currentVersion && h('span', { className: 'dsh-free-model-version' }, `v${currentVersion}`),
+        h('a', { className: 'dsh-free-model-project-link', href: repositoryUrl, target: '_blank',
+          rel: 'noopener noreferrer', title: label, 'aria-label': label },
+          h('svg', { width: 18, height: 18, viewBox: '0 0 16 16', fill: 'currentColor', 'aria-hidden': true, focusable: 'false' },
+            h('path', { d: 'M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z' }),
+          ),
+        ),
+      );
+    }
+
     function parseAvailability(data) {
       if (typeof data?.checking !== 'boolean' || !Array.isArray(data.models)
         || (data.retryAt !== undefined && !Number.isFinite(data.retryAt))
@@ -133,8 +269,9 @@ window.__ModuleLoader__.load({
       return data;
     }
 
-    function ModelPage({ t }) {
+    function ModelPage({ ctx, t, updates }) {
       const headingId = useId();
+      const update = useSyncExternalStore(updates.subscribe, updates.getSnapshot);
       const writes = useRef(new Map());
       const checkRequest = useRef(null);
       const [models, setModels] = useState(null);
@@ -270,18 +407,18 @@ window.__ModuleLoader__.load({
       const results = new Map(availability.models.map(result => [result.id, result]));
       return h('section', { className: 'dsh-free-model-page', 'aria-labelledby': headingId },
         h('div', { className: 'dsh-free-model-content' },
+          h(UpdateBanner, { ctx, t, update }),
           h('header', { className: 'dsh-free-model-header' },
-            h('div', null,
-              h('h1', { id: headingId }, t('title')),
-              h('p', { className: 'dsh-free-model-hint' }, t('hint')),
-            ),
-            h('div', { className: 'dsh-free-model-actions' },
-              h(Button, {
-                variant: 'outline', size: 'sm', onClick: checkAvailability,
-                disabled: loading || checking || cooldown || !models?.length,
-              }, t(checking ? 'checkingAvailability' : cooldown ? 'checkCooldown' : 'checkAvailability')),
-              h(Button, { variant: 'outline', size: 'sm', onClick: refresh, disabled: loading || starting || writes.current.size > 0 }, t('refresh')),
-            ),
+            h('h1', { id: headingId }, t('title')),
+            h(HeaderLinks, { t, currentVersion: update?.currentVersion }),
+            h('p', { className: 'dsh-free-model-hint' }, t('hint')),
+          ),
+          h('div', { className: 'dsh-free-model-actions' },
+            h(Button, {
+              variant: 'outline', size: 'sm', onClick: checkAvailability,
+              disabled: loading || checking || cooldown || !models?.length,
+            }, t(checking ? 'checkingAvailability' : cooldown ? 'checkCooldown' : 'checkAvailability')),
+            h(Button, { variant: 'outline', size: 'sm', onClick: refresh, disabled: loading || starting || writes.current.size > 0 }, t('refresh')),
           ),
           loading && h('p', { className: 'dsh-free-model-status', role: 'status' }, t('loading')),
           loadError !== null && h('p', { className: 'dsh-free-model-status dsh-free-model-error', role: 'alert' }, loadError || t('loadError')),
@@ -329,9 +466,19 @@ window.__ModuleLoader__.load({
       return Icon ? h(Icon, { size }) : null;
     }
 
+    function SidebarUpdateBadge({ t, updates, wide }) {
+      const update = useSyncExternalStore(updates.subscribe, updates.getSnapshot);
+      if (!update?.latestVersion) return null;
+      if (wide) return h('span', { className: 'dsh-free-model-update-badge' }, t('updateBadge'));
+      return h('span', { className: 'dsh-free-model-update-dot' },
+        h('span', { className: 'dsh-free-model-update-sr' }, t('updateBadge')),
+      );
+    }
+
     function apply(ctx) {
       ctx.effect(() => ctx.locale.register(panelId, messages), 'free-model: translations');
       const t = ctx.locale.bind(panelId);
+      const updates = monitorUpdates(ctx);
       ctx.effect(() => {
         const style = document.createElement('style');
         style.textContent = styles;
@@ -341,9 +488,12 @@ window.__ModuleLoader__.load({
       ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
         name: 'sidebar.panellist', id: panelId, order: 30, label: () => t('title'),
       }, SidebarIcon));
+      ctx.slots.inject('sidebar.panellist.trailing', () => ctx.slots.register({
+        name: 'sidebar.panellist.trailing', id: panelId, locale: panelId,
+      }, function Trailing(props) { return h(SidebarUpdateBadge, { ...props, updates }); }));
       ctx.slots.inject('main', () => ctx.slots.register({
         name: 'main', key: panelId, locale: panelId,
-      }, ModelPage));
+      }, function Panel(props) { return h(ModelPage, { ...props, ctx, updates }); }));
     }
 
     return { inject: ['locale', 'slots'], apply };

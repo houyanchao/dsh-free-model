@@ -2,6 +2,7 @@ import manifest from './package.json' with { type: 'json' };
 import { createKiloCatalog, isCatalogConnectionError, KiloCatalogError, KILO_PROVIDER } from './catalog.js';
 import { createModelVisibility, registerModelManagement } from './model-management.js';
 import { DEFAULT_MAX_TOKENS, maxTokensParameter, streamKilo } from './stream.js';
+import { mountUpdates } from './updates.js';
 
 export const name = KILO_PROVIDER;
 export const inject = ['llm'];
@@ -90,5 +91,6 @@ export function apply(ctx) {
       catalog, visibility, fetch: requestKilo,
       onChange: () => registration.replace([KILO_PROVIDER]),
     });
+    mountUpdates(scope);
   });
 }
