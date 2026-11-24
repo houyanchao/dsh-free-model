@@ -216,6 +216,11 @@ window.__ModuleLoader__.load({
       .dsh-free-model-plugin-name { font-weight: 550; }
       .dsh-free-model-plugin p { margin: 2px 0 0; font-size: 13px; color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
       .dsh-free-model-plugin-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+      a.dsh-free-model-plugin-action {
+        background: var(--dsw-static-neutral-bluish-1000, #0f1115); color: #fff; border-color: rgb(255 255 255 / 18%);
+      }
+      a.dsh-free-model-plugin-action:hover { background: var(--dsw-static-neutral-bluish-850, #2c2c2e); }
+      a.dsh-free-model-plugin-action:focus-visible { outline-color: var(--dsw-alias-label-primary, #0f1115); }
       .dsh-free-model-plugin-action:disabled { cursor: default; background: transparent; color: var(--dsw-alias-label-secondary); }
       .dsh-free-model-plugin-action[data-state='installed'] { border-color: transparent; background: color-mix(in srgb, currentColor 6%, transparent); }
       .dsh-free-model-plugin .dsh-free-model-error { grid-column: 1 / -1; color: var(--dsw-alias-state-warn-label, #a1421c); }
