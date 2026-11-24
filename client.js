@@ -10,6 +10,16 @@ window.__ModuleLoader__.load({
     const updateCheckInterval = 5 * 60 * 1000;
     const packageName = '@houyanchao/dsh-free-model';
     const repositoryUrl = 'https://github.com/houyanchao/dsh-free-model';
+    const npmRegistry = 'https://registry.npmjs.org/';
+    const publishedVersion = /^\d+\.\d+\.\d+(?:-[\da-z-]+(?:\.[\da-z-]+)*)?(?:\+[\da-z-]+(?:\.[\da-z-]+)*)?$/i;
+    const recommendedPlugins = [
+      { name: 'dsh-timeline', description: 'timelineDescription' },
+      { name: 'dsh-use-chatgpt', description: 'chatgptDescription' },
+      { name: 'timeline', description: 'browserDescription', stores: [
+        { label: 'chrome', href: 'https://chromewebstore.google.com/detail/fgebdnlceacaiaeikopldglhffljjlhh' },
+        { label: 'edge', href: 'https://microsoftedge.microsoft.com/addons/detail/ekednjjojnhlajfobalaaihkibbdcbab' },
+      ] },
+    ];
     const resultStatuses = new Set(['checking', 'available', 'unavailable']);
     const emptyAvailability = { checking: false, models: [] };
     const reasonKeys = new Map(Object.entries({
@@ -53,6 +63,22 @@ window.__ModuleLoader__.load({
         updateTitle: '有新版本',
         updateDetails: '查看更新',
         viewProject: '查看 GitHub 仓库',
+        otherPlugins: '作者的其他插件',
+        timelineDescription: '为 DSH 对话添加提问时间轴、收藏夹、提示词库和多格式导出。',
+        chatgptDescription: '关联 ChatGPT 账号，在 DSH 中使用套餐额度，并切换账号和模型。',
+        browserDescription: '为 ChatGPT、Gemini、DeepSeek 等网页添加对话时间轴、收藏夹和提示词库。',
+        install: '安装',
+        installed: '已安装',
+        installing: '安装中…',
+        checkInstall: '检测中…',
+        retryInventory: '重新检测',
+        installUnavailable: '安装不可用',
+        installAction: '{name} · {action}',
+        inventoryError: '无法读取已安装插件，请重新检测。',
+        installError: '安装失败，请重试。',
+        chrome: 'Chrome 版',
+        edge: 'Edge 版',
+        storeLabel: '{name} · {store}',
       },
       en: {
         title: 'Free Models',
@@ -88,6 +114,22 @@ window.__ModuleLoader__.load({
         updateTitle: 'Update available',
         updateDetails: 'View update',
         viewProject: 'View GitHub repository',
+        otherPlugins: 'More plugins by this author',
+        timelineDescription: 'Add a question timeline, bookmark folders, a prompt library, and chat exports to DSH.',
+        chatgptDescription: 'Connect your ChatGPT account to use your plan in DSH and switch between accounts and models.',
+        browserDescription: 'Add a chat timeline, bookmarks, and a prompt library to ChatGPT, Gemini, DeepSeek, and other AI chat sites.',
+        install: 'Install',
+        installed: 'Installed',
+        installing: 'Installing…',
+        checkInstall: 'Checking…',
+        retryInventory: 'Check again',
+        installUnavailable: 'Install unavailable',
+        installAction: '{name} · {action}',
+        inventoryError: 'Could not load installed plugins. Check again.',
+        installError: 'Installation failed. Try again.',
+        chrome: 'Chrome',
+        edge: 'Edge',
+        storeLabel: '{name} · {store}',
       },
     };
 
@@ -110,15 +152,17 @@ window.__ModuleLoader__.load({
       }
       .dsh-free-model-update-title { font-weight: 600; }
       .dsh-free-model-update-version { color: var(--dsw-alias-label-secondary); font-size: 13px; }
-      .dsh-free-model-update-action {
+      .dsh-free-model-update-action, .dsh-free-model-plugin-action {
         display: inline-flex; align-items: center; min-height: 32px; padding-inline: 12px;
-        margin-inline-start: auto; border-radius: 999px; white-space: nowrap;
+        border-radius: 999px; white-space: nowrap;
         border: 1px solid var(--dsw-alias-border-l3, color-mix(in srgb, currentColor 16%, transparent));
         background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary);
         font-size: 13px; font-weight: 550; text-decoration: none;
       }
-      .dsh-free-model-update-action:hover { background: var(--dsw-alias-interactive-bg-hover); }
-      .dsh-free-model-update-action:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+      .dsh-free-model-update-action { margin-inline-start: auto; }
+      .dsh-free-model-plugin-action { justify-content: center; box-sizing: border-box; font-family: inherit; cursor: pointer; }
+      :is(.dsh-free-model-update-action, .dsh-free-model-plugin-action):hover { background: var(--dsw-alias-interactive-bg-hover); }
+      :is(.dsh-free-model-update-action, .dsh-free-model-plugin-action):focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
       .dsh-free-model-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; }
       .dsh-free-model-header h1 { margin: 0; font-size: 24px; line-height: 1.3; font-weight: 600; }
       .dsh-free-model-hint { grid-column: 1 / -1; margin: 0; color: var(--dsw-alias-label-secondary); }
@@ -160,6 +204,24 @@ window.__ModuleLoader__.load({
       .dsh-free-model-update-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dsw-alias-label-primary); }
       .dsh-free-model-update-sr {
         position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+      }
+      .dsh-free-model-recommendations {
+        margin-block-start: 36px; container-type: inline-size;
+        --plugin-divider: var(--dsw-alias-line-secondary, color-mix(in srgb, currentColor 12%, transparent));
+      }
+      .dsh-free-model-recommendations h2 { margin: 0 0 12px; font-size: 16px; font-weight: 600; line-height: 1.4; }
+      .dsh-free-model-plugins { margin: 0; padding: 0 16px; list-style: none; border: 1px solid var(--plugin-divider); border-radius: 14px; }
+      .dsh-free-model-plugin { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 16px; padding-block: 13px; }
+      .dsh-free-model-plugin + .dsh-free-model-plugin { border-block-start: 1px solid var(--plugin-divider); }
+      .dsh-free-model-plugin-name { font-weight: 550; }
+      .dsh-free-model-plugin p { margin: 2px 0 0; font-size: 13px; color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
+      .dsh-free-model-plugin-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+      .dsh-free-model-plugin-action:disabled { cursor: default; background: transparent; color: var(--dsw-alias-label-secondary); }
+      .dsh-free-model-plugin-action[data-state='installed'] { border-color: transparent; background: color-mix(in srgb, currentColor 6%, transparent); }
+      .dsh-free-model-plugin .dsh-free-model-error { grid-column: 1 / -1; color: var(--dsw-alias-state-warn-label, #a1421c); }
+      @container (max-width: 370px) {
+        .dsh-free-model-plugin { grid-template-columns: minmax(0, 1fr); }
+        .dsh-free-model-plugins { padding-inline: 12px; }
       }
     `;
 
@@ -260,6 +322,145 @@ window.__ModuleLoader__.load({
       );
     }
 
+    function rpcValue(reply) {
+      if (!reply?.ok) throw new Error(reply?.error?.message);
+      return reply.value;
+    }
+
+    function createPluginInstaller(ctx) {
+      const listeners = new Set();
+      const initial = { inventory: 'unavailable', installed: new Set(), pending: null, error: null };
+      let state = initial;
+      let manager;
+      let revision = 0;
+
+      function update(changes) {
+        state = { ...state, ...changes };
+        for (const listener of listeners) listener();
+      }
+
+      async function refresh() {
+        if (!manager) return;
+        const current = ++revision;
+        try {
+          const bundles = rpcValue(await manager.listBundles());
+          const installed = new Set(bundles.filter(bundle =>
+            bundle.installed || bundle.availability === 'profile' || bundle.availability === 'installation')
+            .map(bundle => bundle.name));
+          if (current === revision) update({ inventory: 'ready', installed, error: installed.has(state.error?.name) ? null : state.error });
+        } catch {
+          if (current === revision) update({ inventory: 'failed' });
+        }
+      }
+
+      ctx.inject(['remote', 'remote.pluginManager'], scope => {
+        scope.effect(() => {
+          manager = scope.remote.pluginManager;
+          const recheck = () => { if (listeners.size) void refresh(); };
+          const unsubscribe = scope.remote.$on('plugin-manager/changed', recheck);
+          const reset = scope.on('connection/reset', recheck);
+          window.addEventListener('focus', recheck);
+          update({ ...initial, inventory: 'loading' });
+          recheck();
+          return () => {
+            manager = undefined;
+            revision++;
+            update(initial);
+            unsubscribe();
+            reset();
+            window.removeEventListener('focus', recheck);
+          };
+        }, 'free-model: plugin inventory');
+      });
+
+      async function install(name) {
+        if (!manager || state.inventory !== 'ready' || state.pending || state.installed.has(name)) return;
+        const host = manager;
+        update({ pending: name, error: null });
+        try {
+          const info = rpcValue(await host.inspect(name, { registry: npmRegistry }));
+          if (host !== manager) return;
+          if (info.status !== 'accepted') throw new Error(info.reason);
+          if (info.registry !== npmRegistry || info.name !== name || info.bundle !== true
+            || typeof info.version !== 'string' || !publishedVersion.test(info.version)) throw new Error();
+
+          const requestId = globalThis.crypto?.randomUUID?.();
+          const options = {
+            enabled: true, registry: npmRegistry, expected: { name, version: info.version },
+            ...(requestId && { requestId }),
+          };
+          let result;
+          try {
+            result = rpcValue(await host.installBundle(`${name}@${info.version}`, options));
+          } catch (error) {
+            // A lost reply can leave pnpm running. Join that request before allowing a retry.
+            if (!requestId || host !== manager) throw error;
+            result = rpcValue(await host.waitForInstall(requestId));
+            if (!result) throw error;
+          }
+          if (!['applied', 'restart-required', 'overridden'].includes(result.application)) {
+            throw new Error(result.error?.diagnostic || result.error?.code);
+          }
+        } catch (error) {
+          if (host === manager) update({ error: { name, message: error.message } });
+        } finally {
+          if (host === manager) {
+            await refresh();
+            if (host === manager) update({ pending: null });
+          }
+        }
+      }
+
+      return {
+        getSnapshot: () => state,
+        subscribe(listener) {
+          listeners.add(listener);
+          if (listeners.size === 1) void refresh();
+          return () => listeners.delete(listener);
+        },
+        install, refresh,
+      };
+    }
+
+    function PluginInstallButton({ name, installer, state, t }) {
+      let label = 'install';
+      if (state.pending === name) label = 'installing';
+      else if (state.inventory === 'unavailable') label = 'installUnavailable';
+      else if (state.inventory === 'failed') label = 'retryInventory';
+      else if (state.inventory === 'loading') label = 'checkInstall';
+      else if (state.installed.has(name)) label = 'installed';
+      return h('button', { type: 'button', className: 'dsh-free-model-plugin-action',
+        'data-state': label, 'aria-label': t('installAction', { name, action: t(label) }),
+        disabled: !!state.pending || (label !== 'install' && label !== 'retryInventory'),
+        onClick: () => { void (label === 'retryInventory' ? installer.refresh() : installer.install(name)); },
+      }, t(label));
+    }
+
+    function PluginRecommendations({ installer, t }) {
+      const headingId = useId();
+      const state = useSyncExternalStore(installer.subscribe, installer.getSnapshot);
+      return h('section', { className: 'dsh-free-model-recommendations', 'aria-labelledby': headingId },
+        h('h2', { id: headingId }, t('otherPlugins')),
+        h('ul', { className: 'dsh-free-model-plugins' }, recommendedPlugins.map(({ name, description, stores }) =>
+          h('li', { key: name, className: 'dsh-free-model-plugin' },
+            h('div', null,
+              h('span', { className: 'dsh-free-model-plugin-name' }, name),
+              h('p', null, t(description)),
+            ),
+            h('div', { className: 'dsh-free-model-plugin-actions', 'aria-live': 'polite' },
+              stores ? stores.map(store =>
+                h('a', { key: store.label, className: 'dsh-free-model-plugin-action', href: store.href,
+                  target: '_blank', rel: 'noopener noreferrer', 'aria-label': t('storeLabel', { name, store: t(store.label) }) }, t(store.label)),
+              ) : h(PluginInstallButton, { name, installer, state, t }),
+            ),
+            state.error?.name === name && !state.installed.has(name) && h('p', { className: 'dsh-free-model-error', role: 'alert' },
+              t('installError'), state.error.message && ` ${state.error.message}`),
+          ),
+        )),
+        state.inventory === 'failed' && h('p', { className: 'dsh-free-model-error', role: 'alert' }, t('inventoryError')),
+      );
+    }
+
     function parseAvailability(data) {
       if (typeof data?.checking !== 'boolean' || !Array.isArray(data.models)
         || (data.retryAt !== undefined && !Number.isFinite(data.retryAt))
@@ -269,7 +470,7 @@ window.__ModuleLoader__.load({
       return data;
     }
 
-    function ModelPage({ ctx, t, updates }) {
+    function ModelPage({ ctx, t, updates, installer }) {
       const headingId = useId();
       const update = useSyncExternalStore(updates.subscribe, updates.getSnapshot);
       const writes = useRef(new Map());
@@ -457,6 +658,7 @@ window.__ModuleLoader__.load({
               );
             }),
           ),
+          h(PluginRecommendations, { installer, t }),
         ),
       );
     }
@@ -479,6 +681,7 @@ window.__ModuleLoader__.load({
       ctx.effect(() => ctx.locale.register(panelId, messages), 'free-model: translations');
       const t = ctx.locale.bind(panelId);
       const updates = monitorUpdates(ctx);
+      const installer = createPluginInstaller(ctx);
       ctx.effect(() => {
         const style = document.createElement('style');
         style.textContent = styles;
@@ -493,7 +696,7 @@ window.__ModuleLoader__.load({
       }, function Trailing(props) { return h(SidebarUpdateBadge, { ...props, updates }); }));
       ctx.slots.inject('main', () => ctx.slots.register({
         name: 'main', key: panelId, locale: panelId,
-      }, function Panel(props) { return h(ModelPage, { ...props, ctx, updates }); }));
+      }, function Panel(props) { return h(ModelPage, { ...props, ctx, updates, installer }); }));
     }
 
     return { inject: ['locale', 'slots'], apply };
