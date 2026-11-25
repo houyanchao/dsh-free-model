@@ -1,4 +1,4 @@
-import { maxTokensParameter } from './stream.js';
+import { maxTokensParameter } from './catalog.js';
 
 const CONCURRENCY = 3;
 const PROBE_TIMEOUT_MS = 18_000;

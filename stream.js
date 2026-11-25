@@ -1,4 +1,5 @@
-import { KILO_BASE_URL } from './catalog.js';
+import { KILO_BASE_URL, KILO_PROVIDER, maxTokensParameter } from './catalog.js';
+import { createImageInputs } from './chatgpt/host/images.js';
 
 const GENERATION_TIMEOUT_MS = 120_000;
 export const DEFAULT_MAX_TOKENS = 8_192;
@@ -51,30 +52,73 @@ function upstreamFailure(code, retryAfter) {
   }
 }
 
-function messageText(message) {
+async function messageContent(message, model, readImage, toolImages) {
   const parts = [];
   for (const block of message.content) {
-    if (block.type === 'text') parts.push(block.text);
-    else if (block.type === 'image') {
-      if (!block.offloaded) {
+    if (block.type === 'text') {
+      parts.push({ type: 'text', text: block.text });
+    } else if (block.type === 'image') {
+      if (block.offloaded) {
+        parts.push({ type: 'text', text: '[该图片已从模型上下文移出]' });
+        continue;
+      }
+      if (!model.inputModalities?.includes('image')) {
         throw new StreamFailure('UNSUPPORTED_CONTENT', '这个 Kilo 免费模型当前只接收文本。');
       }
-      parts.push('[该图片已从模型上下文移出]');
+      if (message.role !== 'user' && message.role !== 'tool') {
+        throw new StreamFailure('UNSUPPORTED_CONTENT', 'Kilo 当前只接收用户或工具提供的图片。');
+      }
+      const image = await readImage(block);
+      if (message.role === 'tool') {
+        toolImages.push({ type: 'text', text: `Image returned by tool call ${message.toolCallId}:` }, image);
+      } else {
+        parts.push(image);
+      }
     } else if (block.type === 'file') {
-      throw new StreamFailure('UNSUPPORTED_CONTENT', '这个 Kilo 免费模型当前只接收文本。');
+      throw new StreamFailure('UNSUPPORTED_CONTENT', 'Kilo 当前无法接收此文件附件。');
     }
   }
-  return parts.join('\n');
+  return parts.every(part => part.type === 'text') ? parts.map(part => part.text).join('\n') : parts;
 }
 
-function convertMessages(options) {
+async function convertMessages(options, model, getAttachments, signal) {
   const messages = options.system ? [{ role: 'system', content: options.system }] : [];
-  const answered = new Set(options.messages.filter(message => message.role === 'tool')
+  // DSH wraps tool results in user-role messages. Emit the results before
+  // any follow-up user content so a Chat Completions call batch stays intact.
+  const history = options.messages.flatMap(message => {
+    if (message.role !== 'user') return [message];
+    const results = message.content.filter(block => block.type === 'tool-result');
+    if (!results.length) return [message];
+    const entries = results.map(({ toolCallId, content }) => ({ role: 'tool', toolCallId, content }));
+    const regular = message.content.filter(block => block.type !== 'tool-result');
+    if (regular.length) entries.push({ role: 'user', content: regular });
+    return entries;
+  });
+  const answered = new Set(history.filter(message => message.role === 'tool')
     .map(message => message.toolCallId));
   const sent = new Set();
+  const toolImages = [];
+  let imageInput;
+  async function readImage(block) {
+    imageInput ??= createImageInputs(getAttachments?.(), signal);
+    try {
+      const image = await imageInput(block);
+      return { type: 'image_url', image_url: { url: image.image_url } };
+    } catch (error) {
+      signal.throwIfAborted();
+      throw new StreamFailure(error.code ?? 'ATTACHMENT_READ_FAILED', error.message);
+    }
+  }
+  function flushToolImages() {
+    // Chat Completions only accepts image parts in the user role. All tool
+    // results in a parallel batch must precede this follow-up message.
+    if (toolImages.length) messages.push({ role: 'user', content: toolImages.splice(0) });
+  }
 
-  for (const message of options.messages) {
-    const content = messageText(message);
+  for (const message of history) {
+    if (message.role !== 'tool') flushToolImages();
+    if (message.role === 'tool' && !sent.delete(message.toolCallId)) continue;
+    const content = await messageContent(message, model, readImage, toolImages);
     if (message.role === 'assistant') {
       const calls = message.content.filter(block => block.type === 'tool-call' && answered.has(block.id));
       const tool_calls = calls.map(block => {
@@ -85,25 +129,17 @@ function convertMessages(options) {
         messages.push({ role: 'assistant', content: content || null, ...(tool_calls.length ? { tool_calls } : {}) });
       }
     } else if (message.role === 'tool') {
-      if (sent.delete(message.toolCallId)) {
-        messages.push({ role: 'tool', content, tool_call_id: message.toolCallId });
-      }
+      messages.push({ role: 'tool', content, tool_call_id: message.toolCallId });
     } else if (content) {
       messages.push({ role: message.role === 'developer' ? 'system' : message.role, content });
     }
   }
+  flushToolImages();
   return messages;
 }
 
-export function maxTokensParameter(supportedParameters) {
-  if (supportedParameters.includes('max_tokens')) return 'max_tokens';
-  if (supportedParameters.includes('max_completion_tokens')) return 'max_completion_tokens';
-  return undefined;
-}
-
-function requestBody(options, model) {
+async function requestBody(options, model, tools, getAttachments, signal) {
   const supported = model.supportedParameters;
-  const tools = options.tools ?? [];
   if (tools.length && !supported.includes('tools')) {
     throw new StreamFailure('INVALID_REQUEST', '这个 Kilo 免费模型不支持工具调用。');
   }
@@ -114,7 +150,7 @@ function requestBody(options, model) {
     throw new StreamFailure('INVALID_REQUEST', '这个 Kilo 免费模型不支持自定义停止词。');
   }
 
-  const messages = convertMessages(options);
+  const messages = await convertMessages(options, model, getAttachments, signal);
   if (!messages.length) throw new StreamFailure('INVALID_REQUEST', '请先输入一条消息。');
   const body = { model: model.id, messages, stream: true };
   const tokenParameter = maxTokensParameter(supported);
@@ -131,10 +167,9 @@ function requestBody(options, model) {
     }));
   }
   if (options.reasoningEffort !== undefined) {
-    if (!supported.includes('reasoning')) {
-      throw new StreamFailure('INVALID_REQUEST', '这个 Kilo 免费模型不支持自定义推理强度。');
-    }
-    body.reasoning = { effort: options.reasoningEffort === 'off' ? 'none' : options.reasoningEffort };
+    const choice = model.reasoningChoices?.find(({ id }) => id === options.reasoningEffort);
+    if (!choice) throw new StreamFailure('UNSUPPORTED_REASONING_EFFORT', '该模型不支持所选推理等级。');
+    Object.assign(body, choice.params);
   }
   return body;
 }
@@ -201,9 +236,12 @@ function mapUsage(raw) {
   };
 }
 
-function toolBlock(block) {
+function toolBlock(block, toolNames) {
   if (!block.id || !block.name) {
     throw new StreamFailure('MALFORMED_RESPONSE', 'Kilo 返回了身份不完整的工具调用。');
+  }
+  if (!toolNames.has(block.name)) {
+    throw new StreamFailure('MALFORMED_RESPONSE', 'Kilo 返回了本次请求未提供的工具。');
   }
   try {
     const parsed = JSON.parse(block.arguments);
@@ -239,7 +277,7 @@ function mapFinishReason(reason, blocks, usage, contextWindow) {
   }
 }
 
-async function* translate(body, model, signal, retryAfter) {
+async function* translate(body, model, signal, retryAfter, toolNames) {
   const blocks = [];
   const tools = new Map();
   let text;
@@ -308,7 +346,11 @@ async function* translate(body, model, signal, retryAfter) {
         yield { type: 'block-start', index: block.index, blockType: 'tool-call' };
       }
       if (typeof call.id === 'string' && call.id) block.id ||= call.id;
-      if (typeof call.function?.name === 'string' && call.function.name) block.name ||= call.function.name;
+      const name = call.function?.name;
+      if (typeof name === 'string' && name && name !== block.name) {
+        count(name);
+        block.name += name;
+      }
       const fragment = call.function?.arguments ?? '';
       if (typeof fragment !== 'string') {
         throw new StreamFailure('MALFORMED_RESPONSE', 'Kilo 返回了无效的工具参数。');
@@ -319,7 +361,7 @@ async function* translate(body, model, signal, retryAfter) {
         type: 'tool-call-delta',
         index: block.index,
         id: block.id,
-        ...(block.name ? { name: block.name } : {}),
+        ...(toolNames.has(block.name) ? { name: block.name } : {}),
         argumentsDelta: fragment,
       };
     }
@@ -334,7 +376,7 @@ async function* translate(body, model, signal, retryAfter) {
   const completed = blocks.flatMap(block => {
     // On length truncation, leave unconfirmed tool calls open so the host can drop them.
     if (block.type === 'tool-call' && reason.kind !== 'tool-calls') return [];
-    const content = block.type === 'tool-call' ? toolBlock(block) : { type: block.type, text: block.text };
+    const content = block.type === 'tool-call' ? toolBlock(block, toolNames) : { type: block.type, text: block.text };
     return [{ type: 'block-end', index: block.index, block: content }];
   });
   yield* completed;
@@ -343,19 +385,28 @@ async function* translate(body, model, signal, retryAfter) {
 }
 
 /** Translate one authenticated-free Kilo streaming request into DeepSeek Harness chunks. */
-export async function* streamKilo(options, model, fetchImpl = fetch, attribution = {}) {
+export async function* streamKilo(options, model, fetchImpl = fetch, { 'user-agent': userAgent, getWebSearchEnabled, getAttachments } = {}) {
   const timeout = AbortSignal.timeout(GENERATION_TIMEOUT_MS);
   const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
   try {
+    signal.throwIfAborted();
+    let tools = options.tools ?? [];
+    if (tools.some(tool => tool.name === 'web_search')) {
+      if (model.webSearch === false || !model.supportedParameters.includes('tools')
+        || (getWebSearchEnabled && !await getWebSearchEnabled(options.sessionId, KILO_PROVIDER, model.id, signal))) {
+        tools = tools.filter(tool => tool.name !== 'web_search');
+      }
+    }
+    const body = await requestBody(options, model, tools, getAttachments, signal);
     signal.throwIfAborted();
     const response = await fetchImpl(`${KILO_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         accept: 'text/event-stream',
-        'user-agent': attribution['user-agent'] ?? 'dsh-open-model',
+        'user-agent': userAgent ?? 'dsh-open-model',
       },
-      body: JSON.stringify(requestBody(options, model)),
+      body: JSON.stringify(body),
       redirect: 'error',
       signal,
     });
@@ -368,7 +419,7 @@ export async function* streamKilo(options, model, fetchImpl = fetch, attribution
       await response.body?.cancel().catch(() => {});
       throw new StreamFailure('MALFORMED_RESPONSE', 'Kilo 没有返回预期的流式回复。');
     }
-    yield* translate(response.body, model, signal, retryAfter);
+    yield* translate(response.body, model, signal, retryAfter, new Set(tools.map(tool => tool.name)));
   } catch (error) {
     if (options.signal?.aborted) {
       yield { type: 'finish', reason: { kind: 'aborted', failure: { code: 'ABORTED', message: '已取消 Kilo 请求。' } } };

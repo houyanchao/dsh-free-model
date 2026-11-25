@@ -1,0 +1,169 @@
+{
+  "kilo": {
+    "name": "OpenModel (免费模型)",
+    "models": [
+      {
+        "id": "kilo-auto/free",
+        "name": "Auto Free",
+        "inputModalities": ["text"],
+        "webSearch": true
+      },
+      {
+        "id": "inclusionai/ling-3.2-flash:free",
+        "name": "inclusionAI: Ling 3.2 Flash (free)",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["instant", "thinking"]
+      },
+      {
+        "id": "baidu/ernie-5.5-flash-preview:free",
+        "name": "Baidu: ERNIE-5.5-Flash-Preview (free)",
+        "inputModalities": ["text"],
+        "webSearch": true,
+        "reasoningEfforts": ["high"]
+      },
+      {
+        "id": "liquid/lfm-3-1.7b:free",
+        "name": "LiquidAI: LFM3-1.7B (free)",
+        "inputModalities": ["text"],
+        "webSearch": true
+      },
+      {
+        "id": "particle-ai/particle-1:free",
+        "name": "Particle AI: Particle-1 (free)",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+      },
+      {
+        "id": "recursive/flint-v1.0:free",
+        "name": "Recursive: Flint (free)",
+        "inputModalities": ["text"],
+        "webSearch": true
+      },
+      {
+        "id": "nvidia/nemotron-3.5-super-vl:free",
+        "name": "NVIDIA: Nemotron 3.5 Super VL (free)",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["instant", "thinking"]
+      },
+      {
+        "id": "nvidia/nemotron-3.5-lightning:free",
+        "name": "NVIDIA: Nemotron 3.5 Lightning (free)",
+        "inputModalities": ["text"],
+        "webSearch": true,
+        "reasoningEfforts": ["instant", "thinking"]
+      },
+      {
+        "id": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "name": "NVIDIA: Nemotron 3 Ultra (free)",
+        "inputModalities": ["text"],
+        "webSearch": true,
+        "reasoningEfforts": ["none", "medium", "high"]
+      },
+      {
+        "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+        "name": "NVIDIA: Nemotron 3 Nano Omni (free)",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["instant", "thinking"]
+      },
+      {
+        "id": "openrouter/free",
+        "name": "OpenRouter Free Models Router",
+        "inputModalities": ["text", "image"],
+        "webSearch": true
+      },
+      {
+        "id": "reflection/beam-free",
+        "name": "Reflection: Beam 1.0 (Free)",
+        "inputModalities": ["text"],
+        "webSearch": true,
+        "reasoningEfforts": ["low", "medium", "high", "xhigh", "max"]
+      },
+      {
+        "id": "stealth/glyph-cluster",
+        "name": "Glyph Cluster",
+        "inputModalities": ["text"],
+        "webSearch": true,
+        "reasoningEfforts": ["low", "medium", "high", "xhigh"]
+      }
+    ]
+  },
+  "chatgpt": {
+    "name": "OpenModel (ChatGPT 套餐)",
+    "models": [
+      {
+        "id": "gpt-6.2-sol",
+        "name": "GPT-6.2-Sol",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["low", "medium", "high", "xhigh", "max", "ultra"]
+      },
+      {
+        "id": "gpt-6.2-astra",
+        "name": "GPT-6.2-Astra",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["low", "medium", "high", "xhigh", "max", "ultra"]
+      },
+      {
+        "id": "gpt-6.1-terra",
+        "name": "GPT-6.1 Terra",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["none", "low", "medium", "high", "xhigh", "max", "ultra"]
+      },
+      {
+        "id": "gpt-6.1-sol",
+        "name": "GPT-6.1-Sol",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["low", "medium", "high", "xhigh", "max", "ultra"]
+      },
+      {
+        "id": "gpt-6-astra",
+        "name": "GPT-6-Astra",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["low", "medium", "high", "xhigh", "max", "ultra"]
+      },
+      {
+        "id": "gpt-6-sol",
+        "name": "GPT-6-Sol",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["none", "low", "medium", "high", "xhigh", "max", "ultra"]
+      },
+      {
+        "id": "gpt-6-luna",
+        "name": "GPT-6-Luna",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["none", "low", "medium", "high", "xhigh", "max"]
+      },
+      {
+        "id": "gpt-5.6-sol",
+        "name": "GPT-5.6-Sol",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["none", "low", "medium", "high", "xhigh", "max", "ultra"]
+      },
+      {
+        "id": "gpt-5.6-terra",
+        "name": "GPT-5.6-Terra",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["none", "low", "medium", "high", "xhigh", "max", "ultra"]
+      },
+      {
+        "id": "gpt-5.6-luna",
+        "name": "GPT-5.6-Luna",
+        "inputModalities": ["text", "image"],
+        "webSearch": true,
+        "reasoningEfforts": ["none", "low", "medium", "high", "xhigh", "max"]
+      }
+    ]
+  }
+}

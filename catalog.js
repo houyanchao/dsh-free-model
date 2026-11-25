@@ -1,9 +1,10 @@
+import { applyModelConfig, getConfiguredSource } from './model-config.js';
+
 export const KILO_BASE_URL = 'https://ai-gateway.kilo.ai/api/v1';
 export const KILO_PROVIDER = 'dsh-free-model-kilo';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const FRESH_MS = 5 * 60_000;
-const MAX_STALE_MS = 20 * 60_000;
 const RETRY_MS = 30_000;
 
 export class KiloCatalogError extends Error {
@@ -42,6 +43,46 @@ function positiveInteger(value) {
   return Number.isSafeInteger(value) && value > 0 ? value : undefined;
 }
 
+export function maxTokensParameter(supportedParameters) {
+  if (supportedParameters.includes('max_tokens')) return 'max_tokens';
+  if (supportedParameters.includes('max_completion_tokens')) return 'max_completion_tokens';
+  return undefined;
+}
+
+function kiloReasoningChoices(opencode, supported) {
+  if (!Array.isArray(opencode?.reasoning_options)) return [];
+  const supportsReasoningObject = supported.includes('reasoning');
+  if (!supportsReasoningObject && !supported.includes('reasoning_effort')) return [];
+
+  const choices = new Map();
+  function add(id, name, effort, enabled) {
+    // Keep the upstream toggle separate from its wire value (e.g. thinking → high).
+    const params = supportsReasoningObject
+      ? { reasoning: { ...(typeof enabled === 'boolean' ? { enabled } : {}), effort } }
+      : { reasoning_effort: effort };
+    choices.set(id, { id, name, params });
+  }
+
+  for (const option of opencode.reasoning_options) {
+    if (option?.type === 'effort' && Array.isArray(option.values)) {
+      for (const id of option.values) {
+        if (typeof id !== 'string' || !/^[a-z][a-z0-9_-]{0,31}$/.test(id)) continue;
+        const variant = opencode.variants?.[id]?.reasoning;
+        const name = id === 'xhigh' ? 'Extra high' : id[0].toUpperCase() + id.slice(1);
+        add(id, name, typeof variant?.effort === 'string' ? variant.effort : id, variant?.enabled);
+      }
+    } else if (option?.type === 'toggle' && supportsReasoningObject) {
+      for (const [id, name] of [['instant', '关闭思考'], ['thinking', '开启思考']]) {
+        const variant = opencode.variants?.[id]?.reasoning;
+        if (variant?.enabled === (id === 'thinking')) {
+          add(id, name, typeof variant.effort === 'string' ? variant.effort : undefined, variant.enabled);
+        }
+      }
+    }
+  }
+  return [...choices.values()];
+}
+
 function modelInfo(row) {
   const contextWindow = positiveInteger(row.context_length) ?? positiveInteger(row.top_provider?.context_length);
   const maxCompletionTokens = positiveInteger(row.top_provider?.max_completion_tokens);
@@ -54,11 +95,13 @@ function modelInfo(row) {
     provider: KILO_PROVIDER,
     id: row.id,
     name: (typeof row.name === 'string' ? row.name.trim() : '') || row.id,
-    inputModalities: ['text'],
+    inputModalities: row.architecture.input_modalities.includes('image') ? ['text', 'image'] : ['text'],
+    webSearch: supportedParameters.includes('tools'),
     ...(description ? { description } : {}),
     ...(contextWindow ? { context: { contextWindow } } : {}),
     ...(maxCompletionTokens ? { maxCompletionTokens } : {}),
     supportedParameters,
+    reasoningChoices: kiloReasoningChoices(row.opencode, supportedParameters),
   };
 }
 
@@ -69,7 +112,7 @@ function retryAfterMs(header, now) {
   return Number.isSafeInteger(duration) && duration > 0 ? duration : undefined;
 }
 
-async function requestCatalog(fetchImpl, now) {
+async function requestCatalog(fetchImpl, now, configured) {
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   let response;
 
@@ -115,9 +158,18 @@ async function requestCatalog(fetchImpl, now) {
   const models = new Map();
   const fetchedAt = now();
   for (const row of payload.data) {
-    if (isFreeTextModel(row, fetchedAt) && !models.has(row.id)) {
-      models.set(row.id, { model: modelInfo(row), expiresAt: row.expiration_date ? Date.parse(row.expiration_date) : Infinity });
+    const config = configured.get(row?.id);
+    if (!config || models.get(row.id)?.model || !isFreeTextModel(row, fetchedAt)) continue;
+    const model = modelInfo(row);
+    if (config.maxCompletionTokens !== undefined && !maxTokensParameter(model.supportedParameters)
+      && (model.maxCompletionTokens ?? Infinity) > config.maxCompletionTokens) {
+      models.set(row.id, { unavailableReason: 'output-limit-unenforceable' });
+      continue;
     }
+    models.set(row.id, {
+      model: applyModelConfig(model, config),
+      expiresAt: row.expiration_date ? Date.parse(row.expiration_date) : Infinity,
+    });
   }
   return { models, fetchedAt };
 }
@@ -134,47 +186,65 @@ function waitWithSignal(promise, signal) {
 }
 
 /** Refresh DSH's model catalog on demand, sharing one anonymous request between readers. */
-export function createKiloCatalog({ fetch: fetchImpl = globalThis.fetch, now = Date.now } = {}) {
+export function createKiloCatalog({
+  fetch: fetchImpl = globalThis.fetch, now = Date.now, configuredModels = getConfiguredSource('kilo')?.models ?? [],
+} = {}) {
+  const configured = new Map(configuredModels.map(row => [row.id, row]));
   let snapshot;
   let lastError;
   let nextRefresh = 0;
   let inFlight;
 
-  function currentSnapshot() {
-    if (snapshot && now() - snapshot.fetchedAt < MAX_STALE_MS) return snapshot.models;
-    throw lastError;
-  }
-
   async function load(signal, refresh = false) {
     signal?.throwIfAborted();
     const manualRefresh = refresh && (!lastError || isCatalogConnectionError(lastError));
     if (now() >= nextRefresh || manualRefresh || (!snapshot && !lastError)) {
-      inFlight ??= requestCatalog(fetchImpl, now).then(
+      inFlight ??= requestCatalog(fetchImpl, now, configured).then(
         result => {
           snapshot = result;
           lastError = undefined;
           nextRefresh = result.fetchedAt + FRESH_MS;
         },
         error => {
+          snapshot = undefined;
           lastError = error;
           nextRefresh = now() + Math.max(RETRY_MS, error.providerRetryAfterMs ?? 0);
         },
       ).finally(() => { inFlight = undefined; });
-      await waitWithSignal(inFlight, signal);
     }
-    if (refresh && lastError) throw lastError;
-    return currentSnapshot();
+    if (inFlight) await waitWithSignal(inFlight, signal);
+    if (lastError) throw lastError;
+    return snapshot.models;
+  }
+
+  async function listConfiguredModels(signal, { refresh = false } = {}) {
+    signal?.throwIfAborted();
+    if (!configured.size) return [];
+    let entries;
+    try {
+      entries = await load(signal, refresh);
+    } catch (error) {
+      signal?.throwIfAborted();
+      if (!(error instanceof KiloCatalogError)) throw error;
+    }
+    return [...configured.values()].map(row => {
+      const entry = entries?.get(row.id);
+      if (entry?.expiresAt > now()) return { ...structuredClone(entry.model), available: true };
+      return {
+        id: row.id, name: row.name ?? row.id, provider: KILO_PROVIDER, available: false,
+        unavailableReason: entry?.unavailableReason ?? (entries ? 'not-offered' : 'provider-unavailable'),
+      };
+    });
   }
 
   return {
-    async listModels(signal, { refresh = false } = {}) {
-      const entries = await load(signal, refresh);
-      return [...entries.values()]
-        .filter(entry => entry.expiresAt > now())
-        .map(entry => structuredClone(entry.model));
+    listConfiguredModels,
+    async listModels(signal, options) {
+      return (await listConfiguredModels(signal, options)).filter(model => model.available);
     },
-
     async getModel(id, signal) {
+      signal?.throwIfAborted();
+      if (!configured.has(id)) return undefined;
       const entry = (await load(signal)).get(id);
       return entry?.expiresAt > now() ? structuredClone(entry.model) : undefined;
     },

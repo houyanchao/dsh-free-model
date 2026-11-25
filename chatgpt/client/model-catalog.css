@@ -1,0 +1,12 @@
+.omgpt-catalog > p { margin: 20px 0; color: var(--omgpt-muted); font-size: 14px; }
+.omgpt-model-disclosure { display: grid; justify-items: start; align-content: center; min-height: 36px; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: start; overflow-wrap: anywhere; cursor: pointer; }
+.omgpt-model-disclosure .dsh-model-hub-row-name { display: flex; align-items: center; gap: 6px; }
+.omgpt-model-disclosure svg { flex: none; color: var(--omgpt-muted); }
+.omgpt-model-disclosure[aria-expanded=true] svg { transform: rotate(180deg); }
+.omgpt-model-switch { display: flex; justify-content: end; align-items: center; }
+.omgpt-model-switch[aria-busy=true] { opacity: .65; }
+.omgpt-model-facts { grid-column: 1 / -1; display: grid; gap: 6px; margin: 5px 0 0; padding: 2px 12px; border-inline-start: 2px solid var(--omgpt-line); font-size: 13px; line-height: 1.5; }
+.omgpt-model-facts > div { display: grid; grid-template-columns: minmax(0, 6.5em) minmax(0, 1fr); gap: 12px; }
+.omgpt-model-facts dt { color: var(--omgpt-muted); }
+.omgpt-model-facts dd { margin: 0; overflow-wrap: anywhere; }
+.omgpt-model-row > p { grid-column: 1 / -1; margin: 4px 0 0; font-size: 13px; }

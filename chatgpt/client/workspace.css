@@ -1,0 +1,101 @@
+.omgpt-workspace {
+  --omgpt-surface: var(--dsw-alias-bg-layer-1);
+  --omgpt-ink: var(--dsw-alias-label-primary);
+  --omgpt-muted: var(--dsw-alias-label-secondary);
+  --omgpt-line: var(--dsw-alias-border-l2, color-mix(in srgb, currentColor 12%, transparent));
+  --omgpt-wash: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, currentColor 6%, transparent));
+  min-width: 0;
+  color: var(--omgpt-ink);
+  container: omgpt-source / inline-size;
+}
+.omgpt-workspace [hidden] { display: none !important; }
+.omgpt-source-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; }
+.omgpt-source-heading > div:first-child { min-width: min(195px, 100%); flex: 1; }
+.omgpt-source-heading h2, .omgpt-login h2 { font-family: inherit; font-size: 20px; line-height: 1.35; font-weight: 600; letter-spacing: -.02em; margin: 0; }
+.omgpt-source-heading p, .omgpt-login-hint { color: var(--omgpt-muted); font-size: 14px; line-height: 1.6; margin: 6px 0 0; }
+.omgpt-login {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 254px; box-sizing: border-box; padding: 34px 20px; text-align: center;
+  border: 1px solid var(--omgpt-line); border-radius: 16px;
+}
+.omgpt-login-icon {
+  display: grid; place-items: center; width: 44px; height: 44px; margin-block-end: 15px;
+  color: var(--omgpt-ink); background: var(--omgpt-wash); border-radius: 14px;
+}
+.omgpt-login-hint { max-width: 42ch; text-wrap: pretty; }
+.omgpt-login .omgpt-actions { justify-content: center; margin-block-start: 19px; }
+.omgpt-login .omgpt-actions button { max-width: 100%; overflow-wrap: anywhere; }
+.omgpt-login .omgpt-error { margin: 8px 0 0; }
+.omgpt-workspace :where(button, summary):focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.omgpt-workspace button:disabled { opacity: .55; cursor: default; }
+.omgpt-actions .omgpt-primary { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; min-height: 38px; padding-inline: 16px; border: 0; border-radius: 999px; background: var(--omgpt-ink); color: var(--omgpt-surface); }
+.omgpt-actions .omgpt-primary:hover:enabled { background: color-mix(in srgb, var(--omgpt-ink) 86%, var(--omgpt-surface)); }
+.omgpt-mark { width: 16px; height: 16px; flex: none; display: block; filter: invert(1); }
+body[data-ds-dark-theme] .omgpt-mark { filter: none; }
+.omgpt-details { color: var(--omgpt-ink); font-size: 13px; }
+.omgpt-details > summary {
+  display: flex; align-items: center; gap: 8px; min-height: 40px;
+  list-style: none; overflow-wrap: anywhere; cursor: pointer;
+}
+.omgpt-details > summary::-webkit-details-marker { display: none; }
+.omgpt-details > summary > svg { flex: none; color: var(--omgpt-muted); }
+.omgpt-details > summary > svg:last-child { margin-inline-start: auto; }
+.omgpt-details[open] > summary > svg:last-child { transform: rotate(180deg); }
+.omgpt-details > summary:hover { color: var(--omgpt-ink); }
+.omgpt-account-details {
+  margin-block: 16px 18px; padding-inline: 12px;
+  border: 1px solid var(--omgpt-line); border-radius: 10px;
+}
+.omgpt-account-details > summary { min-height: 42px; }
+.omgpt-account-details > summary > svg:last-child { margin-inline-start: 0; }
+.omgpt-account-identity { min-width: 0; font-weight: 500; }
+.omgpt-account-identity > span { margin-inline-end: 5px; color: var(--omgpt-muted); font-weight: 400; }
+.omgpt-manage-label { flex: none; margin-inline-start: auto; color: var(--omgpt-muted); }
+.omgpt-account-details > summary:hover .omgpt-manage-label { color: var(--omgpt-ink); }
+.omgpt-account-details > .omgpt-account { border-block-start: 1px solid var(--omgpt-line); padding-block-end: 12px; }
+.omgpt-legacy-defaults { color: var(--omgpt-muted); }
+.omgpt-legacy-defaults p { color: var(--omgpt-muted); }
+.omgpt-icon-button { width: 34px; height: 34px; display: inline-grid; place-items: center; flex: none; padding: 0; border: 1px solid var(--omgpt-line); border-radius: 9px; background: transparent; color: var(--omgpt-muted); cursor: pointer; }
+.omgpt-icon-button:hover:enabled { color: var(--omgpt-ink); background: var(--omgpt-wash); }
+.omgpt-profile-list { margin: 0; padding: 0; list-style: none; }
+.omgpt-profile {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  min-height: 64px; padding-block: 11px; border-block-end: 1px solid var(--omgpt-line);
+}
+.omgpt-profile-avatar {
+  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
+  background: var(--omgpt-ink); color: var(--omgpt-surface); font-size: 13px; line-height: 1; font-weight: 550;
+}
+.omgpt-profile-text { display: grid; gap: 3px; min-width: 0; }
+.omgpt-profile-name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.omgpt-profile-name strong { min-width: 0; font-size: 15px; font-weight: 550; overflow-wrap: anywhere; }
+.omgpt-current-account {
+  display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 999px;
+  background: var(--omgpt-wash);
+  color: var(--omgpt-muted); font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.omgpt-profile-meta { display: flex; align-items: center; gap: 3px 12px; flex-wrap: wrap; font-size: 13px; color: var(--omgpt-muted); overflow-wrap: anywhere; }
+.omgpt-profile-actions { display: flex; align-items: center; justify-self: end; gap: 6px; }
+.omgpt-account-action, .omgpt-account-more, .omgpt-account-add {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 32px;
+  border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--omgpt-ink);
+  font: inherit; font-size: 13px; font-weight: 500; line-height: 1.4; cursor: pointer;
+}
+.omgpt-account-action, .omgpt-account-add { border-color: var(--omgpt-line); padding: 5px 12px; }
+.omgpt-account-more { width: 32px; padding: 0; color: var(--omgpt-muted); }
+.omgpt-account-add { min-height: 36px; margin-block-start: 14px; font-size: 14px; }
+.omgpt-account-action:hover:enabled, .omgpt-account-add:hover:enabled,
+.omgpt-account-more:hover:enabled, .omgpt-account-more[aria-expanded=true] { color: var(--omgpt-ink); background: var(--omgpt-wash); }
+.omgpt-account-flow { display: grid; gap: 12px; justify-items: start; padding: 16px 0; }
+.omgpt-account-flow p { margin: 0; color: var(--omgpt-muted); }
+.omgpt-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.omgpt-actions:empty { display: none; }
+.omgpt-account > p { margin: 12px 0; font-size: 14px; color: var(--omgpt-muted); }
+.omgpt-workspace .omgpt-error { color: var(--dsw-alias-state-warn-label, #9a461e); overflow-wrap: anywhere; }
+
+@container omgpt-source (max-width: 400px) {
+  .omgpt-profile { column-gap: 8px; }
+  .omgpt-profile-meta { gap: 2px 6px; }
+  .omgpt-account-identity > span { display: block; font-size: 12px; }
+  .omgpt-account-details > summary { padding-block: 5px; }
+}

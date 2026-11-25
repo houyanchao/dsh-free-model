@@ -6,7 +6,7 @@ import { KiloCatalogError } from './catalog.js';
 import { createModelAvailability } from './model-availability.js';
 import { streamKilo } from './stream.js';
 
-function harnessHome() {
+export function harnessHome() {
   const home = process.env.DSH_HOME?.trim();
   if (!home) return join(homedir(), '.dsh');
   if (home === '~') return homedir();
@@ -64,10 +64,14 @@ export function registerModelManagement(ctx, { catalog, visibility, fetch, onCha
       try {
         if (request.method === 'GET') {
           const refresh = new URL(request.url).searchParams.get('refresh') === '1';
-          const [models, isDisabled] = await Promise.all([catalog.listModels(signal, { refresh }), visibility.readDisabled()]);
+          const [models, isDisabled] = await Promise.all([catalog.listConfiguredModels(signal, { refresh }), visibility.readDisabled()]);
           if (refresh && !lifetime.signal.aborted) onChange();
           return json({
-            models: models.map(({ id, name }) => ({ id, name, enabled: !isDisabled(id) })),
+            models: models.map(({ id, name, available, unavailableReason }) => ({
+              id, name, available, unavailableReason, enabled: available && !isDisabled(id),
+            })),
+            ...(models.some(model => model.unavailableReason === 'provider-unavailable')
+              ? { catalogError: '暂时无法核对 Kilo 免费模型，请稍后刷新。' } : {}),
             availability: availability.snapshot(),
           });
         }
@@ -78,7 +82,7 @@ export function registerModelManagement(ctx, { catalog, visibility, fetch, onCha
         }
         const { id, enabled } = input;
         if (!await catalog.getModel(id, signal)) {
-          return json({ error: '模型已不在 Kilo 免费目录中，请刷新列表。' }, 404);
+          return json({ error: '此模型当前不可用，请刷新列表。' }, 404);
         }
         signal.throwIfAborted();
         await visibility.setEnabled(id, enabled);

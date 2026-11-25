@@ -1,0 +1,83 @@
+export const dictionaries = {
+  zh: {
+    webSearch: '网页搜索', searchHelp: '允许模型在此对话中按需搜索网页',
+    searchUnavailable: '当前模型没有可用的搜索服务', searchLoadFailed: '无法读取网页搜索设置。',
+    searchRecheck: '重新检测', searchRetry: '重试读取网页搜索设置', saveFailed: '保存失败，请重试',
+    legacyDefaults: '旧版网页搜索默认设置', legacyHint: '旧版已默认开启网页搜索。还原后，尚未单独设置的对话将默认关闭网页搜索。',
+    resetDefaults: '还原默认设置',
+    accountOptions: '{label} 的更多操作', switchAccount: '切换', switchToAccount: '切换到 {label}',
+    identityFallback: 'ChatGPT 账号',
+    planModels: '套餐模型', planHint: '可用模型和使用额度取决于当前 ChatGPT 账号的套餐。',
+    connectTitle: '连接你的 ChatGPT 账号', subtitle: '让 DSH 直接使用你的 ChatGPT 套餐额度。',
+    desktopTitle: '在桌面端使用 ChatGPT 套餐', connectionFailed: '无法读取账号状态',
+    browserTitle: '在浏览器中继续', chooseSignedIn: '选择已登录账号',
+    authorizeHint: '请在 3 分钟内完成浏览器中的授权。完成后将切换到该账号。',
+    authorizationFailed: '授权未完成', close: '关闭',
+    reconnectAccount: '重新连接', pendingAccount: '待完成授权', resumeAccount: '继续授权',
+    signedOut: '已退出', expiredAccount: '需要重新登录', noConsent: '套餐尚未授权',
+    differentAccount: '你选择了另一个账号。再次点击登录，即可用所选账号建立新连接。',
+    manageAccounts: '管理账号',
+    activeAccount: '当前账号',
+    newAccount: '添加账号',
+    loading: '正在读取连接状态…',
+    unavailable: '请在本机的 macOS 或 Windows 版 DeepSeek Harness 中使用 ChatGPT 套餐。',
+    connecting: '请在浏览器中完成授权，然后回到 DSH。',
+    needsConsent: '请授权使用 ChatGPT 套餐额度。',
+    signIn: '使用 ChatGPT 登录',
+    enable: '授权使用套餐额度',
+    cancel: '取消授权流程',
+    signOut: '退出登录',
+    retry: '重新读取状态',
+    requestFailed: '无法连接本地 ChatGPT 套餐服务，请重试。',
+    modelsLoading: '正在读取模型列表…',
+    modelsEmpty: '尚未配置 ChatGPT 套餐模型。',
+    modelsFailed: '无法读取模型列表。',
+    refreshModels: '刷新模型列表',
+  },
+  en: {
+    webSearch: 'Web search', searchHelp: 'Allow the model to search the web when needed in this conversation',
+    searchUnavailable: 'No search service is available for this model', searchLoadFailed: 'Could not load web search settings.',
+    searchRecheck: 'Check again', searchRetry: 'Retry loading web search', saveFailed: 'Couldn’t save. Try again.',
+    legacyDefaults: 'Legacy web search default', legacyHint: 'Turn web search off for conversations that still use your previous default.',
+    resetDefaults: 'Restore defaults',
+    accountOptions: 'More options for {label}', switchAccount: 'Switch', switchToAccount: 'Switch to {label}',
+    identityFallback: 'ChatGPT account',
+    planModels: 'Plan models', planHint: 'Model access and usage limits depend on the current account’s ChatGPT plan.',
+    connectTitle: 'Connect your ChatGPT account', subtitle: 'Use your ChatGPT plan allowance directly in DSH.',
+    desktopTitle: 'Use your ChatGPT plan on desktop', connectionFailed: 'Couldn’t load your account',
+    browserTitle: 'Continue in your browser', chooseSignedIn: 'Choose a signed-in account',
+    authorizeHint: 'Complete authorization in your browser within 3 minutes to switch to this account.',
+    authorizationFailed: 'Authorization incomplete', close: 'Close',
+    reconnectAccount: 'Reconnect', pendingAccount: 'Authorization pending', resumeAccount: 'Continue sign-in',
+    signedOut: 'Signed out', expiredAccount: 'Sign in again', noConsent: 'Plan access not granted',
+    differentAccount: 'You chose a different account. Select Continue with ChatGPT again to connect it.',
+    manageAccounts: 'Manage accounts',
+    activeAccount: 'Active account',
+    newAccount: 'Add account',
+    loading: 'Checking the connection…',
+    unavailable: 'Use your ChatGPT plan in a local DeepSeek Harness instance on macOS or Windows.',
+    connecting: 'Finish authorizing in your browser, then return to DSH.',
+    needsConsent: 'Authorize access to your ChatGPT plan usage.',
+    signIn: 'Continue with ChatGPT',
+    enable: 'Authorize plan usage',
+    cancel: 'Cancel authorization',
+    signOut: 'Sign out',
+    retry: 'Check connection again',
+    requestFailed: 'Could not reach the local ChatGPT plan service. Try again.',
+    modelsLoading: 'Loading the model list…',
+    modelsEmpty: 'No ChatGPT plan models are configured.',
+    modelsFailed: 'Could not load the model list.',
+    refreshModels: 'Reload models',
+  },
+};
+
+export function chatLanguage(language, ctx) {
+  const tag = language || ctx?.locale?.getSnapshot?.().active || globalThis.document?.documentElement.lang || 'zh';
+  return tag.toLowerCase().startsWith('en') ? 'en' : 'zh';
+}
+
+export function translate(language) {
+  const messages = dictionaries[language] ?? dictionaries.zh;
+  return (key, values = {}) => (messages[key] ?? dictionaries.zh[key] ?? key)
+    .replace(/\{(\w+)\}/g, (match, name) => values[name] ?? match);
+}
