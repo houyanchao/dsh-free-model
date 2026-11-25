@@ -1,24 +1,29 @@
-# dsh-open-model
+# Open Model
 
-DeepSeek Harness 的 Kilo 免费模型插件。启用后，左侧栏会出现「免费模型」入口，原生模型选择器会显示「免费模型」分组。目录和对话请求都走 Kilo 官方匿名 API，无需登录或填写 API Key。
+在 DeepSeek Harness 里直接使用免费 AI 模型，也能接入你已有的 ChatGPT 套餐。
 
 插件只列出 Kilo 明确标记为免费且价格为零的文本模型。模型上下线与匿名额度以 Kilo 为准，遇到限流时可以等待后重试。云端推理由 Kilo 提供，对话内容会发往 Kilo。
 
 ![DSH 免费模型管理页，显示模型可用性、检测耗时和开关](docs/images/free-models.png)
 
-## 在自研 DSH 客户端安装
+## 安装
 
-在 DSH 的插件管理页中搜索并安装 `dsh-open-model`。如果已经安装旧包 `@houyanchao/dsh-free-model`，请先移除旧包再安装新包。已有对话使用的模型标识和本地模型开关设置沿用原值。
+在终端运行以下命令，从 npm 安装插件并启动 DeepSeek Harness。
 
-本地开发时，在顶部开发菜单选择「本地插件调试」→「导入本地插件…」，选择项目目录。如果插件已导入但处于关闭状态，在左侧「插件」→「已安装」中打开 `dsh-open-model` 的开关。
-
-也可用目标客户端自己的 DSH 环境链接项目目录。
-
-```sh
-dsh plugin --profile web add "link:/absolute/path/to/dsh-open-model"
+```bash
+dsh plugin --profile web add dsh-open-model
+dsh web
 ```
 
-包名为 `dsh-open-model`，本地加载条目和 Provider ID 都是 `dsh-free-model-kilo`。
+升级时运行以下命令。
+
+```bash
+dsh plugin --profile web update dsh-open-model
+```
+
+通过源码运行 DSH 且终端提示 `command not found: dsh` 时，请在 DSH 源码仓库根目录执行上述命令，并将开头的 `dsh` 换成 `pnpm dsh`，例如 `pnpm dsh plugin --profile web add dsh-open-model`。
+
+如果已安装旧包 `@houyanchao/dsh-free-model`，请先运行 `dsh plugin --profile web remove @houyanchao/dsh-free-model`，再安装新包。已有对话的模型标识和本地模型开关设置会沿用。
 
 ## 管理模型
 
