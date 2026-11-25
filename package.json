@@ -1,7 +1,7 @@
 {
   "name": "dsh-open-model",
-  "version": "1.1.0",
-  "description": "安装后，无需注册或登录，即可在 DSH 中使用免费 AI 模型。连接 ChatGPT 账号后，还能直接使用已有套餐的额度。",
+  "version": "1.1.1",
+  "description": "DSH插件：为 DSH 提供免费模型，让 DSH 直接使用你的 ChatGPT 套餐额度。",
   "type": "module",
   "license": "GPL-3.0-or-later",
   "repository": {
