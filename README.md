@@ -11,6 +11,8 @@ Kilo 免费模型 · ChatGPT 套餐 · 模型筛选与测速
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/houyanchao/dsh-open-model/pulls)
 [![GitHub stars](https://img.shields.io/github/stars/houyanchao/dsh-open-model?style=social)](https://github.com/houyanchao/dsh-open-model)
 
+**简体中文** | [English](./README.en.md)
+
 ![OpenModel 管理页中的免费模型列表](./docs/images/free-models.png)
 
 </div>
