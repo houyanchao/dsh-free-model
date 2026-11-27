@@ -1,0 +1,6 @@
+url: https://github.com/houyanchao/dsh-open-model
+name: houyanchao/dsh-open-model
+category: model
+description:
+  en: Use free Kilo models or sign in with your ChatGPT subscription, and choose which models appear in the DSH chat.
+  zh: 无需注册、登录，在 DSH 中使用免费模型。让 DSH 使用你的 ChatGPT 套餐额度。
