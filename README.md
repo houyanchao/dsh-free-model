@@ -2,7 +2,7 @@
 
 # dsh-open-model
 
-**[DeepSeek Harness](https://www.deepseek.com/harness/) 模型管理插件**
+**[DeepSeek Harness](https://www.deepseek.com/harness/) 免费模型插件**
 
 Kilo 免费模型 · ChatGPT 套餐 · 模型筛选与测速
 
@@ -17,7 +17,7 @@ Kilo 免费模型 · ChatGPT 套餐 · 模型筛选与测速
 
 ## 📖 dsh-open-model 是什么？
 
-Open Model 让你在 DeepSeek Harness 中使用 Kilo 的免费模型，也可以登录自己的 ChatGPT 账号，使用套餐内的模型。
+Open Model 让你在 DeepSeek Harness 中使用 Kilo 的免费模型，也可以登录自己的 ChatGPT 使用套餐额度。
 
 ## ✨ 功能特性
 
@@ -56,48 +56,6 @@ dsh plugin --profile web add dsh-open-model
 在「免费模型」标签页点「测速」会从当前 DSH 的网络出口，给通过目录核对的每个模型发一条固定的文本测试请求。收到正常文本回复时标为「可用」，测试失败时标为「不可用」并显示原因。请求耗时以毫秒显示，超过时限则显示「超时」。标签反映该次检测的结果，显示开关仍可单独控制。检测请求计入 [Kilo 匿名请求额度](https://kilo.ai/docs/gateway/authentication#anonymous-access)。
 
 插件会检查 npm 的 `latest` 版本。新版比当前安装版本新且已发布满 24 小时后，侧栏的「OpenModel」入口旁会显示「更新」，管理页顶部也会显示「有新版本」。点「查看更新」可打开插件详情。
-
-## 🛠️ 开发
-
-使用 Node.js 22.19+（22.x）或 24+，在项目目录安装依赖、构建并运行测试。
-
-```sh
-npm ci
-npm run build
-npm test
-```
-
-本地调试时，构建完成后可将项目链接到目标 DSH 环境。
-
-```sh
-dsh plugin --profile web add "link:/absolute/path/to/dsh-open-model"
-```
-
-Kilo 沿用 Provider ID `dsh-free-model-kilo`。内置 ChatGPT 使用 `dsh-open-model-chatgpt`，可与独立插件 `dsh-use-chatgpt` 并存。Open Model 的账号记录保存在当前 DSH 主目录的 `dsh-open-model/chatgpt/` 下。
-
-宿主与客户端入口生成在 `dist/`。在 macOS 上构建需要 Xcode 命令行工具，构建会同时生成兼容 Apple Silicon 和 Intel 的钥匙串辅助程序。制作供 macOS 和 Windows 共用的 npm 包时，请在 macOS 上运行 `npm pack`。
-
-### 维护模型清单
-
-插件根目录的 [models.json](models.json) 是一个对象，每个顶层键都是适配器标识。`kilo` 对应 Kilo 免费模型，`chatgpt` 对应 ChatGPT 套餐。为已有来源添加模型时，编辑该键下的 `models` 数组。要接入新的提供方，还需在插件中实现并注册与新键对应的适配器。
-
-| 来源字段 | 用途 |
-| --- | --- |
-| `name` | 对话模型选择器中的分组名，例如 `OpenModel (免费模型)`。 |
-| `models` | 该来源的模型列表。添加、删除或移动条目即可调整候选模型及其展示顺序。 |
-
-修改这份 JSON 后，重启 DSH 即可载入新配置。管理页的「刷新」会按已载入的配置重新核对提供方目录。
-
-| 模型字段 | 用途 |
-| --- | --- |
-| `id` | 必填，使用提供方的模型 ID，同一来源内唯一。 |
-| `name` | 可选，覆盖模型显示名称。 |
-| `inputModalities` | 允许的输入类型。可填 `["text"]` 或 `["text", "image"]`。 |
-| `reasoningEfforts` | 允许用户选择的推理档位 ID。填空数组可关闭档位选择。 |
-| `webSearch` | 布尔值。设为 `false` 可关闭该模型的网页搜索。设为 `true` 时仍需满足相应来源的搜索条件。 |
-| `contextWindow`、`maxCompletionTokens` | 正整数，分别限制上下文窗口和单次最大输出的 token 数。 |
-
-能力字段均可省略。提供方声明了输入类型或推理档位时，插件只开放配置和提供方都支持的选项。提供方和配置都给出 token 上限时，使用较小值。如果为 Kilo 模型指定了输出上限，插件会核对该模型能否接受输出长度参数，或其自身的上限是否已满足配置。两项都无法确认时，该模型会置灰。
 
 ## ⭐ 支持一下
 
